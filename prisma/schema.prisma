@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  RESPONDED
+  FOLLOW_UP_1
+  FOLLOW_UP_2
+  MEETING_SCHEDULED
+  PROPOSAL_SENT
+  WON
+  LOST
+  ARCHIVED
+}
+
+enum LeadTemperature {
+  HOT
+  WARM
+  COLD
+  UNKNOWN
+}
+
+enum MessageType {
+  INITIAL
+  FOLLOW_UP_1
+  FOLLOW_UP_2
+  CUSTOM
+}
+
+enum MessageChannel {
+  INSTAGRAM
+  WHATSAPP
+  LINKEDIN
+  EMAIL
+  OTHER
+}
+
+enum MessageStatus {
+  DRAFT
+  USED
+  SENT
+  RESPONDED
+  IGNORED
+}
+
+enum FollowUpStatus {
+  PENDING
+  DONE
+  CANCELED
+  OVERDUE
+}
+
+enum FeedbackProblemType {
+  INVENTED_INFO
+  GENERIC_MESSAGE
+  BAD_CLASSIFICATION
+  BAD_STRATEGY
+  BAD_FORMATTING
+  GOOD_RESULT
+  OTHER
+}
+
+model Lead {
+  id               String          @id @default(cuid())
+  companyName      String
+  instagram        String?         @unique
+  website          String?
+  niche            String?
+  preferredChannel String?
+  source           String?         @default("manual")
+  notes            String?
+  status           LeadStatus      @default(NEW)
+  temperature      LeadTemperature @default(UNKNOWN)
+  score            Int?            @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  analyses  LeadAnalysis[]
+  messages  MessageSuggestion[]
+  followups FollowUpTask[]
+  feedbacks AgentFeedback[]
+
+  @@map("leads")
+}
+
+model LeadAnalysis {
+  id                  String   @id @default(cuid())
+  leadId              String
+  lead                Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  classification      String?
+  executiveSummary    String?
+  commercialDiagnosis String?
+  confirmedInfo       Json?    @default("[]")
+  observations        Json?    @default("[]")
+  hypotheses          Json?    @default("[]")
+  pains               Json?    @default("[]")
+  opportunities       Json?    @default("[]")
+  strategy            String?
+  closingProbability  String?
+  nextAction          String?
+  missingInfo         Json?    @default("[]")
+  rawInput            Json?
+  rawOutput           String?
+  createdAt           DateTime @default(now())
+
+  messages  MessageSuggestion[]
+  feedbacks AgentFeedback[]
+
+  @@map("lead_analyses")
+}
+
+model MessageSuggestion {
+  id         String         @id @default(cuid())
+  leadId     String
+  lead       Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  analysisId String?
+  analysis   LeadAnalysis?  @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+  type       MessageType    @default(INITIAL)
+  channel    MessageChannel @default(INSTAGRAM)
+  content    String
+  status     MessageStatus  @default(DRAFT)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  followups FollowUpTask[]
+
+  @@map("message_suggestions")
+}
+
+model FollowUpTask {
+  id        String             @id @default(cuid())
+  leadId    String
+  lead      Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messageId String?
+  message   MessageSuggestion? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  dueDate   DateTime
+  status    FollowUpStatus     @default(PENDING)
+  notes     String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@map("follow_up_tasks")
+}
+
+model AgentFeedback {
+  id                  String              @id @default(cuid())
+  leadId              String
+  lead                Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  analysisId          String?
+  analysis            LeadAnalysis?       @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+  rating              Int
+  problemType         FeedbackProblemType @default(OTHER)
+  comment             String?
+  expectedImprovement String?
+  createdAt           DateTime            @default(now())
+
+  @@map("agent_feedbacks")
+}
