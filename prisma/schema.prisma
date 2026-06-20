@@ -68,6 +68,15 @@ enum FeedbackProblemType {
   OTHER
 }
 
+enum LossReason {
+  SEM_VERBA
+  SEM_INTERESSE
+  JA_POSSUI_SISTEMA
+  SEM_RESPOSTA
+  ADIADO
+  OUTRO
+}
+
 model Lead {
   id               String          @id @default(cuid())
   companyName      String
@@ -87,6 +96,7 @@ model Lead {
   messages  MessageSuggestion[]
   followups FollowUpTask[]
   feedbacks AgentFeedback[]
+  outcome   LeadOutcome?
 
   @@map("leads")
 }
@@ -163,4 +173,39 @@ model AgentFeedback {
   createdAt           DateTime            @default(now())
 
   @@map("agent_feedbacks")
+}
+
+/// Jornada comercial real do lead — base do sistema de memória/aprendizado (Fase 2).
+/// Relação 1:1 com Lead: cada lead tem no máximo um registro de outcome, atualizado
+/// progressivamente conforme o funil avança (reunião → proposta → fechamento/perda).
+model LeadOutcome {
+  id                  String      @id @default(cuid())
+  leadId              String      @unique
+  lead                Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  /// Espelha Lead.status mas é a fonte de verdade para métricas de funil
+  /// (permite reclassificar o outcome sem reabrir o lead operacionalmente).
+  status              LeadStatus  @default(NEW)
+  lossReason          LossReason?
+
+  valorProposta       Decimal?    @db.Decimal(12, 2)
+  valorFechado        Decimal?    @db.Decimal(12, 2)
+  canalContato        MessageChannel?
+
+  dataPrimeiroContato DateTime?
+  dataResposta        DateTime?
+  dataReuniao         DateTime?
+  dataProposta        DateTime?
+  dataFechamento      DateTime?
+
+  observacoes         String?
+
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([status])
+  @@index([lossReason])
+  @@index([canalContato])
+  @@index([dataFechamento])
+  @@map("lead_outcomes")
 }

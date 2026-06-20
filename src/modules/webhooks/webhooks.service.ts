@@ -102,6 +102,17 @@ export class WebhooksService {
       temperature,
     })
 
+    // ── 1b. Inicializar LeadOutcome com dataPrimeiroContato e canalContato ────
+    // Roda em toda chamada do webhook (lead novo ou existente), mas só seta
+    // dataPrimeiroContato na criação do outcome — nunca sobrescreve um contato
+    // já registrado. canalContato é atualizado para refletir o canal mais
+    // recente informado pelo n8n, já que preferredChannel pode mudar entre análises.
+    await prisma.leadOutcome.upsert({
+      where:  { leadId: lead.id },
+      update: { canalContato: channel },
+      create: { leadId: lead.id, status: 'NEW', canalContato: channel, dataPrimeiroContato: new Date() },
+    })
+
     // ── 2. Criar Análise ──────────────────────────────────────────────────────
     const analysis = await prisma.leadAnalysis.create({
       data: {

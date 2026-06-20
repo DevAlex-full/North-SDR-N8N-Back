@@ -9,6 +9,8 @@ import { messagesRoutes } from './modules/messages/messages.route'
 import { followUpsRoutes } from './modules/followups/followups.route'
 import { feedbacksRoutes } from './modules/feedbacks/feedbacks.route'
 import { webhooksRoutes } from './modules/webhooks/webhooks.route'
+import { outcomesRoutes } from './modules/outcomes/outcomes.route'
+import { learningRoutes } from './modules/learning/learning.route'
 import { error } from './utils/response'
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -42,6 +44,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     await secured.register(followUpsRoutes)
     await secured.register(feedbacksRoutes)
     await secured.register(webhooksRoutes)
+    await secured.register(outcomesRoutes)
+    await secured.register(learningRoutes)
   })
 
   // ── 404 ───────────────────────────────────────────────────────────────────
