@@ -77,6 +77,19 @@ enum LossReason {
   OUTRO
 }
 
+enum ConversationChannel {
+  INSTAGRAM
+  WHATSAPP
+  EMAIL
+  LINKEDIN
+  OTHER
+}
+
+enum ConversationDirection {
+  SENT
+  RECEIVED
+}
+
 model Lead {
   id               String          @id @default(cuid())
   companyName      String
@@ -92,11 +105,12 @@ model Lead {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
-  analyses  LeadAnalysis[]
-  messages  MessageSuggestion[]
-  followups FollowUpTask[]
-  feedbacks AgentFeedback[]
-  outcome   LeadOutcome?
+  analyses      LeadAnalysis[]
+  messages      MessageSuggestion[]
+  followups     FollowUpTask[]
+  feedbacks     AgentFeedback[]
+  outcome       LeadOutcome?
+  conversations LeadConversation[]
 
   @@map("leads")
 }
@@ -208,4 +222,35 @@ model LeadOutcome {
   @@index([canalContato])
   @@index([dataFechamento])
   @@map("lead_outcomes")
+}
+
+/// Log de conversas reais com o lead — mensagens efetivamente enviadas
+/// (SENT) e respostas recebidas (RECEIVED), por canal. Base da Fase 3.5
+/// (Conversas e Respostas Assistidas) e pré-requisito para o North exibir
+/// o histórico completo de conversa de um lead sem nova migration.
+///
+/// Diferença em relação a MessageSuggestion: MessageSuggestion guarda
+/// rascunhos sugeridos pela análise inicial do SDR Agent (DRAFT/USED/SENT/
+/// RESPONDED/IGNORED) — ainda pode nunca ter sido enviado. LeadConversation
+/// guarda o registro factual da troca real de mensagens (enviado/recebido),
+/// incluindo sugestões de resposta geradas pelo reply-assistant (marcadas
+/// via metadata, ver módulo reply-assistant).
+model LeadConversation {
+  id        String                 @id @default(cuid())
+  leadId    String
+  lead      Lead                   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel   ConversationChannel    @default(INSTAGRAM)
+  direction ConversationDirection
+  content   String
+  /// Campo livre para metadados que ainda não justificam coluna própria:
+  /// ex. { "source": "reply-assistant", "intentAnalysis": "...", "stage": "..." }
+  /// Mantém o model extensível sem exigir nova migration para a Fase 4/5.
+  metadata  Json?
+  createdAt DateTime               @default(now())
+
+  @@index([leadId])
+  @@index([channel])
+  @@index([direction])
+  @@index([createdAt])
+  @@map("lead_conversations")
 }

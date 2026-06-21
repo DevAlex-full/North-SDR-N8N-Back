@@ -11,6 +11,8 @@ import { feedbacksRoutes } from './modules/feedbacks/feedbacks.route'
 import { webhooksRoutes } from './modules/webhooks/webhooks.route'
 import { outcomesRoutes } from './modules/outcomes/outcomes.route'
 import { learningRoutes } from './modules/learning/learning.route'
+import { conversationsRoutes } from './modules/conversations/conversations.route'
+import { replyAssistantRoutes } from './modules/reply-assistant/reply-assistant.route'
 import { error } from './utils/response'
 
 export async function buildApp(): Promise<FastifyInstance> {
@@ -34,7 +36,8 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // ── Rotas protegidas por API Key ──────────────────────────────────────────
   // addHook aplica apiKeyMiddleware em TODAS as rotas registradas neste escopo.
-  // Cobre: leads, analyses, messages, followups, feedbacks e webhooks.
+  // Cobre: leads, analyses, messages, followups, feedbacks, webhooks,
+  // outcomes, learning, conversations e reply-assistant.
   await app.register(async (secured) => {
     secured.addHook('preHandler', apiKeyMiddleware)
 
@@ -46,6 +49,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     await secured.register(webhooksRoutes)
     await secured.register(outcomesRoutes)
     await secured.register(learningRoutes)
+    await secured.register(conversationsRoutes)
+    await secured.register(replyAssistantRoutes)
   })
 
   // ── 404 ───────────────────────────────────────────────────────────────────
